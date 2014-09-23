@@ -86,26 +86,29 @@ which.max(cancer.df[,9])
 
 3. **Data structures** (3 points each, 12 total)
 
-    1. $(1,2,3,4,5,6,7,8,7,6,5,4,3,2,1)$
-    
+      1. $(1,2,3,4,5,6,7,8,7,6,5,4,3,2,1)$
+
 ```{r}
-c(seq_len(8),seq(7,1)) 
+c(seq_len(8),seq(7,1))
 ```    
-
-          2. $(1,2,2,3,3,3,4,4,4,4,5,5,5,5,5)$
-
+  2. $(1,2,2,3,3,3,4,4,4,4,5,5,5,5,5)$
+          
 ```{r}
 rep(1:5,1:5)
 ```
 
-          3. $\begin{pmatrix} 0 & 1 & 1 \ 1 & 0 & 1 \ 1 & 1 & 0 \ \end{pmatrix}$
+  3. $\begin{pmatrix} 
+  0 & 1 & 1 \\
+  1 & 0 & 1 \\
+  1 & 1 & 0 \\
+  \end{pmatrix}$
     
     
 ```{r}
 matrix(data=1,nrow=3,ncol=3)-diag(3)
 ```
 
-          4. $\begin{pmatrix}
+  4. $\begin{pmatrix}
       1 & 2 & 3 & 4 \\
       1 & 4 & 9 & 16 \\
       1 & 8 & 27 & 64  \\
