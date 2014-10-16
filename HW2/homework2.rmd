@@ -1,0 +1,258 @@
+---
+title: 'Bios 301: Homework 2'
+output: pdf_document
+---
+### Question 1 ###
+
+*20 points*
+
+Here is the function for the secant algorithm:
+
+```{r}
+options(digits=10)
+secant <- function(guess,tol=1e-8,max_count=1000) {
+  x0 <- guess
+  x1 <- x0+0.1
+  count <- 0
+  while(count < max_count){
+    f0 <- cos(x0)-x0
+    f1 <- cos(x1)-x1
+    x2 <- x1-f1*(x1-x0)/(f1-f0)
+    if(abs(x2-x1) <= tol){
+      cat("Converged! x=", x2)
+      return(x2)
+      break}
+    x0 <- x1
+    x1 <- x2
+    count <- count+1
+  }
+}
+system.time(secant(1))
+```
+
+And here is the function that implement Newton-Raphson algorithm:
+
+```{r}
+newton_raphson <- function(guess,tol=1e-8,max_count=1000) {
+  x <- guess
+  count <- 0
+  while(count < max_count){
+    f <- cos(x) - x
+    df <- -sin(x)-1
+    xnew <- x-f/df
+    if(abs(x-xnew) <= tol){
+      cat("Converged! x=",xnew)
+      return(xnew)
+      break}
+    x <- xnew
+    count <- count+1
+  }
+}
+system.time(newton_raphson(1))
+```
+
+From the results above, I think there is no great difference of the speed between these 2 methods.
+
+### Question 2 ###
+
+*18 points*
+
+```{r}
+haart.df <- read.csv("haart.csv")
+```
+
+1. 
+
+```{r}
+haart.df$init.date <- as.Date(haart.df$init.date,format="%m/%d/%Y")
+haart.df$last.visit <- as.Date(haart.df$last.visit,format="%m/%d/%Y")
+haart.df$date.death <- as.Date(haart.df$date.death,format="%m/%d/%Y")
+```
+
+2.
+
+```{r}
+haart.df["death within a year"] <- +((haart.df$date.death-haart.df$init.date)<365)
+```
+
+3.
+
+```{r}
+haart.df["follow up time"] <- NA
+j <- 1
+for (i in haart.df$init.date) {
+  if (is.na(haart.df$last.visit[j])) {
+    haart.df[j,14] <- haart.df$date.death[j]-i
+  } else if(is.na(haart.df$date.death[j])) {
+    haart.df[j,14] <- haart.df$last.visit[j]-i
+  } else {
+    haart.df[j,14] <- min(haart.df$last.visit[j],haart.df$date.death[j])-i
+  }
+"  if (haart.df[j,14]>365){
+    print(haart.df[j,])
+  }"
+  j <- j+1
+}
+```
+
+4.
+
+```{r}
+haart.df["Unknown after 1 year"] <- +(haart.df[,14]<=365)
+```
+
+5.
+
+```{r}
+temp<-strsplit(as.character(haart.df$init.reg),",")
+nmax<-max(sapply(temp,length))
+temp2 <- do.call(rbind, lapply(temp,`[`,seq_len(nmax)))
+haart.df <- cbind(haart.df, temp2)
+```
+
+6.
+
+```{r}
+addition.df <- read.csv("haart2.csv")
+addition.df[, setdiff(names(haart.df),names(addition.df))] <- NA
+haart.df.df <- rbind(haart.df, addition.df)
+```
+
+### Question 3 ###
+
+*12 points*
+
+```{r}
+ffvalues <- function(path, file='outfile.csv', nTeams=12, cap=200, posReq=c(qb=1, rb=2, wr=3, te=1, k=1),
+                     points=c(fg=4, xpt=1, pass_yds=1/25, pass_tds=4, pass_ints=-2,
+                              rush_yds=1/10, rush_tds=6, fumbles=-2, rec_yds=1/20, rec_tds=6)) {
+  k <- read.csv('proj_k14.csv', header=TRUE, stringsAsFactors=FALSE)
+  qb <- read.csv('proj_qb14.csv', header=TRUE, stringsAsFactors=FALSE)
+  rb <- read.csv('proj_rb14.csv', header=TRUE, stringsAsFactors=FALSE)
+  te <- read.csv('proj_te14.csv', header=TRUE, stringsAsFactors=FALSE)
+  wr <- read.csv('proj_wr14.csv', header=TRUE, stringsAsFactors=FALSE)
+  cols <- unique(c(names(k), names(qb), names(rb), names(te), names(wr)))
+  k[,'pos'] <- 'k'
+  qb[,'pos'] <- 'qb'
+  rb[,'pos'] <- 'rb'
+  te[,'pos'] <- 'te'
+  wr[,'pos'] <- 'wr'
+  cols <- c(cols, 'pos')
+  k[,setdiff(cols, names(k))] <- 0
+  qb[,setdiff(cols, names(qb))] <- 0
+  rb[,setdiff(cols, names(rb))] <- 0
+  te[,setdiff(cols, names(te))] <- 0
+  wr[,setdiff(cols, names(wr))] <- 0
+  cols <- c(cols, 'pos')
+  x <- rbind(k[,cols], qb[,cols], rb[,cols], te[,cols], wr[,cols])
+  names(x) <- gsub('[.]', '', names(x))
+  x[,'p_fg'] <- x[,'fg']*points["fg"]
+  x[,'p_xpt'] <- x[,'xpt']*points["xpt"]
+  x[,'p_pass_yds'] <- x[,'pass_yds']*points["pass_yds"]
+  x[,'p_pass_tds'] <- x[,'pass_tds']*points["pass_tds"]
+  x[,'p_pass_ints'] <- x[,'pass_ints']*points["pass_ints"]
+  x[,'p_rush_yds'] <- x[,'rush_yds']*points["rush_yds"]
+  x[,'p_rush_tds'] <- x[,'rush_tds']*points["rush_tds"]
+  x[,'p_fumbles'] <- x[,'fumbles']*points["fumbles"]
+  x[,'p_rec_yds'] <- x[,'rec_yds']*points["rec_yds"]
+  x[,'p_rec_tds'] <- x[,'rec_tds']*points["rec_tds"]
+  x[,'points'] <- rowSums(x[,grep("^p_", names(x))])
+  x2 <- x[order(x[,'points'], decreasing=TRUE),]
+  k.ix <- which(x2[,'pos']=='k')
+  qb.ix <- which(x2[,'pos']=='qb')
+  rb.ix <- which(x2[,'pos']=='rb')
+  te.ix <- which(x2[,'pos']=='te')
+  wr.ix <- which(x2[,'pos']=='wr')
+  if (posReq["k"]>0){
+    x2[k.ix, 'marg'] <- x2[k.ix,'points'] - x2[k.ix[posReq["k"]*nTeams],'points']
+  }
+  if (posReq["qb"]>0){
+    x2[qb.ix, 'marg'] <- x2[qb.ix,'points'] - x2[qb.ix[posReq["qb"]*nTeams],'points']
+  }
+  if (posReq["rb"]>0){
+    x2[rb.ix, 'marg'] <- x2[rb.ix,'points'] - x2[rb.ix[posReq["rb"]*nTeams],'points']
+  }
+  if (posReq["te"]>0){
+    x2[te.ix, 'marg'] <- x2[te.ix,'points'] - x2[te.ix[posReq["te"]*nTeams],'points']
+  }
+  if (posReq["wr"]){
+    x2[wr.ix, 'marg'] <- x2[wr.ix,'points'] - x2[wr.ix[posReq["wr"]*nTeams],'points']
+  }
+  x3 <- x2[x2[,'marg'] >= 0 & !is.na(x2[,'marg']),]
+  x3 <- x3[order(x3[,'marg'], decreasing=TRUE),]
+  rownames(x3) <- NULL
+  x3[,'value'] <- x3[,'marg']*(nTeams*cap-nrow(x3))/sum(x3[,'marg']) + 1
+  x4 <- x3[,c('PlayerName','pos','points','value')]
+  write.csv(x4,file = file)
+  return(x4)
+}
+```
+
+1.
+
+```{r}
+x1 <- ffvalues('.')
+```
+
+    1.  How many players are worth more than $20? (1 point)
+    
+```{r}
+sum((x1[,"value"]>20))
+```
+
+    2.  Who is 15th most valuable running back (rb)? (1 point)
+    
+```{r}
+x1[x1[,'pos'] == 'rb',][15,]
+```
+
+2.
+
+```{r}
+x2 <- ffvalues(getwd(), '16team.csv', nTeams=16, cap=150)
+```
+
+    1.  How many players are worth more than $20? (1 point)
+    
+```{r}
+sum((x2[,"value"]>20))
+```
+
+    2.  How many wide receivers (wr) are in the top 40? (1 point)
+    
+```{r}
+sum(x2[x2[,'pos'] == 'wr','value']> x2[41,'value'])
+```
+
+3.
+
+```{r}
+x3 <- ffvalues('.', 'qbheavy.csv', posReq=c(qb=2, rb=2, wr=3, te=1, k=0),
+               points=c(fg=0, xpt=0, pass_yds=1/25, pass_tds=6, pass_ints=-2,
+                        rush_yds=1/10, rush_tds=6, fumbles=-2, rec_yds=1/20, rec_tds=6))
+```
+
+    1.  How many players are worth more than $20? (1 point)
+    
+```{r}
+sum((x3[,"value"]>20))
+```
+
+    2.  How many quarterbacks (qb) are in the top 30? (1 point)
+    
+```{r}
+sum(x3[x3[,'pos'] == 'qb','value']> x3[31,'value'])
+```
+
+### Question 4 ###
+
+*5 bonus points*
+
+```{r}
+objs <- mget(ls("package:base"), inherits = TRUE)
+funs <- Filter(is.function, objs)
+```
+
+1.  Which function has the most arguments? (3 points)
+
+2. How many functions have no arguments? (2 points)
