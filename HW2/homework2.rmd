@@ -255,4 +255,19 @@ funs <- Filter(is.function, objs)
 
 1.  Which function has the most arguments? (3 points)
 
+```{r}
+indx <- integer(length(funs))
+i <- 1
+while(i < length(funs)){
+  indx[i] <- length(formals(funs[[i]]))
+  i <- i+1
+}
+funs[which(indx==max(indx))]
+```
+
 2. How many functions have no arguments? (2 points)
+
+```{r}
+sum(indx==0)
+```
+
