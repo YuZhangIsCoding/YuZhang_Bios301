@@ -1,0 +1,175 @@
+---
+title: 'Bios 301: Assignment 3'
+output: html_document
+---
+
+### Question 1 ###
+
+1.
+
+```{r}
+crap <- function(){
+x <- sum(ceiling(6*runif(2)))
+if (x==7 | x==11){
+  return("win")
+} else {
+  x1<-x
+}
+while(TRUE){
+  x <- sum(ceiling(6*runif(2)))
+  if (x == x1){
+    return("win")
+  } else if (x==7 | x==11){
+    return("lose")
+  }
+}
+}
+```
+
+The results of 3 games:
+
+```{r}
+set.seed(100)
+replicate(3,crap())
+```
+
+2.
+
+```{r}
+findseed <- function(maxit=10000){
+  seed <- 1
+  ref <- c(rep("win",10))
+  while(seed<maxit){
+    set.seed(seed)
+    results <- replicate(10,crap())
+    if (identical(results,ref)){ 
+      cat("seed =",seed,"\n",results,"\n")
+      break 
+      }
+    seed <- seed+1
+  }
+}
+
+findseed()
+```
+
+### Question 2 ###
+
+```{r}
+f <- function(x){
+  if (x==0){
+    f<-0
+  } else {
+    f <- abs(x)*log(abs(x)/2)*exp(-abs(x))
+  }
+  return(f)
+}
+
+x <- seq(-10, 10, by=0.01)
+y<-lapply(x,f)
+plot(x,y,type = "l")
+```
+
+From the plot there would be 2 global maximas.
+
+```{r}
+goldensearch <- function(xc,xa=-10,xb=10,tol=1e-4){
+  phi <- (1+sqrt(5))/2
+  while (xb-xa > tol){
+    if (xb-xc > xc-xa){
+      y <- xc+(xb-xc)/(1+phi)
+      if (f(y) >= f(xc)){
+        xa <- xc
+        xc <- y
+      } else {
+        xb <- y
+      } 
+    } else{
+      y <- xc-(xc-xa)/(1+phi)
+      if (f(y) >= f(xc)){
+        xb <- xc
+        xc <- y
+      } else {
+        xa <- y
+      }
+    }
+  }
+  cat("x =",y,", maxima =",f(y))
+}
+```
+
+Change the initial guesses and get the 2 maximas
+
+```{r}
+goldensearch(-5)
+goldensearch(5)
+```
+
+### Question 3 ###
+
+```{r}
+haart <- data.frame(read.csv("haart.csv"))
+# Logistic function
+logistic <- function(x) 1 / (1 + exp(-x))
+
+index <- which(!(is.na(haart$cd4baseline) | is.na(haart$weight) | is.na(haart$hemoglobin)))
+x <- cbind(haart$weight[index],haart$hemoglobin[index],haart$cd4baseline[index])
+y <- haart$death[index]
+
+estimate_logistic <- function(x, y, MAX_ITER=10){
+  n <- dim(x)[1]
+  k <- dim(x)[2]
+  x <- as.matrix(cbind(rep(1, n), x))
+  y <- as.matrix(y)
+  theta <- rep(0, k+1)
+  J <- rep(0, MAX_ITER)
+  
+  for (i in 1:MAX_ITER){
+    z <- x %*% theta
+    h <- logistic(z)
+    grad <- t((1/n)*x) %*% as.matrix(h - y)
+    H <- t((1/n)*x) %*% diag(array(h)) %*% diag(array(1-h)) %*% x
+    J[i] <- (1/n) %*% sum(-y * log(h) - (1-y) * log(1-h))
+    theta <- theta - solve(H) %*% grad
+  }
+  return(theta)
+}
+
+estimate_logistic(x, y)
+```
+
+From R's built-in linear regression
+
+```{r}
+data <- data.frame(cbind(x,y))
+g <- glm(y ~ V1 + V2 + V3, data=data, family=binomial(logit))
+print(g$coefficients)
+```
+
+### Question 4 ###
+
+```{r}
+data <- readLines("addr.txt")
+addr <- data.frame(matrix(NA,nrow=length(data),ncol=7))
+addr[,] <- ""
+colnames(addr) <- c( "lastname", "firstname", "streetno", "streetname", "city", "state", "zip")
+data1 <- strsplit(data," ")
+for (i in 1:length(data)){
+  tem <- unlist(data1[i])
+  count <- 1
+  for(j in 1:length(tem)){
+    if (tem[j]!=""){
+      addr[i,count]<-paste(addr[i,count],tem[j])
+      if(count==3){
+        count<-count+1
+      } else if (count == 7) {
+        break
+      } else if(tem[j+1] == "") {
+        count <- count+1
+      }
+    }
+  }
+}
+print(addr)
+```
+
