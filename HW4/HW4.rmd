@@ -1,6 +1,6 @@
 ---
 title: 'Bios 301: Assignment 4'
-output: html_document
+output: pdf_document
 ---
 
 ### Question 1 ###
