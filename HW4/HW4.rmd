@@ -1,0 +1,173 @@
+---
+title: 'Bios 301: Assignment 4'
+output: html_document
+---
+
+### Question 1 ###
+
+```{r}
+pop <- data.frame(m = rnorm(100, 160, 20), f = rnorm(100, 160, 20))
+next_gen <- function(pop) {
+  pop$m <- sample(pop$m)
+  pop$m <- rowMeans(pop)
+  pop$f <- pop$m
+  pop
+}
+gen <- 1
+hist(pop$m,main = paste("Histogram of generation" , gen),ylim =range(0,40),xlab="Male heights / cm",labels = TRUE)
+while(gen < 9){
+pop <- next_gen(pop)
+gen<-gen+1
+hist(pop$m,main = paste("Histogram of generation" , gen),ylim =range(0,40),xlab="Male heights / cm",labels = TRUE)
+}
+```
+
+### Question 2 ###
+
+```{r}
+library(ggplot2)
+pop <- data.frame(m = rnorm(100, 160, 20), f = rnorm(100, 160, 20))
+next_gen <- function(pop) {
+  pop$m <- sample(pop$m)
+  pop$m <- rowMeans(pop)
+  pop$f <- pop$m
+  pop
+}
+temp <- pop
+gen <- 1
+pop<-cbind(pop,gen)
+while(gen < 9){
+temp <- next_gen(temp)
+gen<-gen+1
+pop <- rbind(pop,cbind(temp,gen))
+}
+ggplot(pop, aes(x=m, y=f))+geom_point(alpha=0.3)+facet_wrap(~ gen)+xlim(100,220)+ylim(120,200)
+```
+
+### Question 3 ###
+
+```{r}
+set.seed(1000)
+results <- data.frame(matrix(NA, nrow = 1000, ncol = 4))
+names(results) <- c("mean","lower","upper","contains mean")
+count <- 0
+for(i in 1:1000){
+  x <- runif(100, -1, 1)
+  results$mean[i] <- mean(x)
+  s <- sd(x)
+  results$lower[i] <- results$mean[i]-1.96*s/sqrt(100)
+  results$upper[i] <- results$mean[i]+1.96*s/sqrt(100)
+  if(results$lower[i] <= 0 && results$upper >= 0){
+    results[i,"contains mean"] <- 1
+    count <- count+1
+  } else{
+    results[i,"contains mean"] <- 0
+  }
+}
+cat("Number of trials: 1000\n")
+results[1:10,]
+cat(count/10,"percent of CI's contained the mean")
+```
+
+### Question 4 ###
+
+1.
+
+```{r}
+makePatient <- function() {
+  vowel <- grep("[aeiou]", letters)
+  cons <- grep("[^aeiou]", letters)
+  name <- paste(sample(LETTERS[cons], 1), sample(letters[vowel], 1), sample(letters[cons], 1), sep='')
+  gender <- factor(sample(0:1, 1), levels=0:1, labels=c('female','male'))
+  dob <- as.Date(sample(7500, 1), origin="1970-01-01")
+  n <- sample(6, 1)
+  doa <- as.Date(sample(1500, n), origin="2010-01-01")
+  pulse <- round(rnorm(n, 80, 10))
+  temp <- round(rnorm(n, 98.4, 0.3), 2)
+  fluid <- round(runif(n), 2)
+  list(name, gender, dob, doa, pulse, temp, fluid)
+}
+
+setClass("medicalRecord",slots=c("name", "gender", "date_of_birth", "date_of_admission", "pulse", "temperature", "fluid_intake"))
+
+medicalRecord <- function(object){
+  names(object)<-c("name", "gender", "date_of_birth", "date_of_admission", "pulse", "temperature", "fluid_intake")
+  class(object)<-"medicalRecord"
+  object
+}
+```
+
+```{r}
+set.seed(8)
+mrecord<-makePatient()
+mrecord<-medicalRecord(mrecord)
+mrecord
+attributes(mrecord)
+```
+
+2.
+
+```{r}
+mean.medicalRecord <- function(object){
+  list(pulse=mean(object$pulse),temperature = mean(object$temperature),fluids=mean(object$fluid_intake))
+}
+
+print.medicalRecord <- function(object){
+  cat("name:",object$name,"\n")
+  cat(paste("gender:",object$gender,"\n"))
+  cat(paste("data of birth:",object$date_of_birth,"\n"))
+  cat("date of admission\t","pulse\t","temperature\t","fluid intake\n ")
+  cat(paste(object$date_of_admission[order(object$date_of_admission)],"\t\t\t",object$pulse[order(object$date_of_admission)],"\t",object$temperature[order(object$date_of_admission)],"\t\t\t",object$fluid_intake[order(object$date_of_admission)],"\n"))
+}
+
+plot.medicalRecord <- function(object){
+  plot(object$date_of_admission[order(object$date_of_admission)],object$pulse[order(object$date_of_admission)],type="b",main="measurement of pulse over time",xlab="time",ylab="pulse")
+  plot(object$date_of_admission[order(object$date_of_admission)],object$temperature[order(object$date_of_admission)],type="b",main="measurement of temperature over time",xlab="time",ylab="temperature / F")
+  plot(object$date_of_admission[order(object$date_of_admission)],object$fluid_intake[order(object$date_of_admission)],type="b",main="measurement of fluid intake over time",xlab="time",ylab="fluid intake")
+}
+```
+
+```{r}
+mean(mrecord)
+print(mrecord)
+plot(mrecord)
+
+```
+
+3.
+
+```{r}
+setClass("cohort",slots=c("name","medicalRecord"))
+set.seed(8)
+group<-list(name=NA,medicalRecord=NA)
+for(i in 1:10){
+  temp<-makePatient()
+  temp<-medicalRecord(temp)
+  group$name[i]<-temp[1]
+  group$medicalRecord[i]<-list(temp)
+}
+class(group)<-"cohort"
+
+mean.cohort <- function(object){
+  medicalRecord<-list(name=NA,pulse=NA,tem=NA,fluid=NA)
+  for(i in 1:10){
+    medicalRecord$name[i]<-object$name[[i]]
+    medicalRecord$pulse[i]<-mean(object$medicalRecord[[i]]$pulse)
+    medicalRecord$tem[i]<-mean(object$medicalRecord[[i]]$temperature)
+    medicalRecord$fluid[i]<-mean(object$medicalRecord[[i]]$fluid_intake)
+  }
+  list(mean=medicalRecord)
+}
+
+print.cohort <- function(object){
+  for(i in 1:10){
+    cat("\nNo.",i,"\n")
+    print(object$medicalRecord[[i]])
+  }
+}
+```
+
+```{r}
+mean(group)
+print(group)
+```
